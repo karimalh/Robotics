@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Controller Interface</title>
+<style>
+  /* Your existing styles here... */
+  .input-group {
+    margin-top: 20px;
+    text-align: center;
+  }
+  .input-group input {
+    width: 100px;
+    padding: 5px;
+    margin-right: 10px;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+  }
+  .input-group button {
+    padding: 6px 20px;
+    border: none;
+    border-radius: 5px;
+    background-color: #4CAF50;
+    color: white;
+    cursor: pointer;
+  }
+  .input-group button:active {
+    background-color: #367c39;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">ReAnna & Karim & Roberto</div>
+<div class="controller">
+  <!-- Retained the Stop button -->
+  <!-- <button class="button stop" onclick="sendCommand('Stop')">Stop</button> -->
+  <button class="button stop" onclick=location.href="/Stop">Stop</button>
+
+  <!-- Input and button for Speed -->
+  <div class="input-group"> 
+    <form action="http://10.243.93.234:5000/get_data" method="POST" > <!-- CHANGE TO /Speed-->
+      <input type="number" id="speedInput" name="speed" placeholder="Enter Speed">
+      <input type="number" id="delayInput" name="delay" placeholder="Enter Delay"> <!-- DELELTE IF WANNA GO BACK-->
+      <button type="submit">Set Speed and Delay</button>
+    </form>
+  </div>
+
+  <!--<h2>Send Target Request</h2>
+    
+  <form action="http://10.243.93.234:5000/target/" method="get">
+      <label for="target">Target (integer):</label>
+      <input type="number" id="target" name="target" required>
+      <br>
+      <input type="submit" value="Submit">
+  </form> -->
+
+  <!-- Input and button for Delay -->
+  <!-- <div class="input-group">
+    <form action="http://10.243.93.234:5000/Delay" method="POST" >
+      <input type="number" id="delayInput" name="delay" placeholder="Enter Delay">
+      <button type="submit">Set Delay</button>
+    </form>
+  </div> -->
+</div>
+
+<script>
+  function sendCommand(direction) {
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", "http://10.243.93.234:5000/drive?command=" + direction, true);
+    xhr.onreadystatechange = function() {
+      if (xhr.readyState === 4 && xhr.status === 200) {
+        console.log('Command sent:', direction);
+      }
+    };
+    xhr.send();
+  }
+
+  function sendCommandWithValue(command) {
+    var value = document.getElementById(command.toLowerCase() + "Input").value;
+    sendCommand(command + "=" + value);
+  }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,110 @@
+import requests
+import time
+
+import RPi.GPIO as GPIO
+
+PARTNER_IP = '<partner-ip-address>'
+
+GPIO.setmode(GPIO.BOARD)
+
+#Ports
+GPIO.setup(16, GPIO.OUT) #forward motor 1
+GPIO.setup(22, GPIO.OUT) #forward motor 2
+GPIO.setup(18, GPIO.OUT) #backwards motor 1
+GPIO.setup(36, GPIO.OUT) #backwards motor 2=
+# Define the GPIO pins where the switches are connected
+
+GPIO_PIN1 = 13
+GPIO_PIN2 = 29
+
+# Set up the GPIO pins as inputs
+switch1_pin = GPIO.setup(GPIO_PIN1, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+switch2_pin =GPIO.setup(GPIO_PIN2, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+
+# Now you can read the state of the switches
+# using GPIO.input(switch1_pin) or GPIO.input(switch2_pin)
+
+# PWM
+F_motor1 = GPIO.PWM(16,100)
+F_motor2 = GPIO.PWM(22,100)
+B_motor1 = GPIO.PWM(18,500)
+B_motor2 = GPIO.PWM(36,500)
+
+current_speed = 0
+current_delay = 0
+response = None 
+global counter
+counter = 0
+
+on_left = True
+should_restart = False
+
+def convert_pwm_mm_s(pwm_val):
+    return int((pwm_val - 32.7) / 0.138)
+
+def mm_s_pwm(mm_s):
+    return int(32.7 + 0.138 * mm_s)
+
+def adjust_motor_speed():
+    global counter
+    global F_motor1
+    global F_motor2
+    global should_restart
+
+    if GPIO.input(GPIO_PIN1) == False and GPIO.input(GPIO_PIN2) == False:
+        counter = 0
+        # Both switches pressed, continue with current PWM
+        print ('both')
+        should_restart = True
+        return
+    elif on_left and GPIO.input(GPIO_PIN1) == False or not on_left and GPIO.input(GPIO_PIN2) == False:
+        # Switch 1 pressed, go to full speed
+        F_motor1.stop()
+        F_motor2.stop()
+
+        linear_speed = int(requests.get('http://10.243.93.234:5000/get_speed').content.decode('utf-8'))
+        speed = min(max(mm_s_pwm(linear_speed), 50), 95) + 5
+
+        F_motor1.start(speed)
+        F_motor2.start(speed)
+        linear_speed = convert_pwm_mm_s(speed)
+
+        print('Speed up: ', linear_speed)
+        requests.get('http://10.243.93.234:5000/set_speed/' + str(linear_speed))
+
+        target_speed = convert_pwm_mm_s(speed - 5)
+        #TODO: uncomment when you have IP
+        # requests.get('http://' + PARTNER_IP + ':5000/target/' + str(target_speed))
+
+        print ('1 is on')
+    elif on_left and GPIO.input(GPIO_PIN2) == False or not on_left and GPIO.input(GPIO_PIN1) == False:
+        # Switch 2 pressed, slow down
+        F_motor1.stop()
+        F_motor2.stop()
+
+        linear_speed = int(requests.get('http://10.243.93.234:5000/get_speed').content.decode('utf-8'))
+        speed = min(max(mm_s_pwm(linear_speed), 55), 100) - 5
+
+        F_motor1.start(speed)
+        F_motor2.start(speed)
+
+        linear_speed = convert_pwm_mm_s(speed)
+
+        print('Slow down: ', linear_speed)
+        requests.get('http://10.243.93.234:5000/set_speed/' + str(linear_speed))
+
+        target_speed = convert_pwm_mm_s(speed + 5)
+        #TODO: uncomment when you have IP
+        # requests.get('http://' + PARTNER_IP + ':5000/target/' + str(target_speed))
+
+        print ('2 is on')
+    else:
+        # No switch pressed, perhaps stop or maintain current speed
+        print ('Neither')
+        should_restart = True
+        return
+
+if _name_ == "_main_":
+    while True:
+        adjust_motor_speed()
+        time.sleep(0.1)
